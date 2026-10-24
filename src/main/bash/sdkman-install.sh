@@ -70,7 +70,7 @@ function __sdkman_install_candidate_version() {
 	mkdir -p "${SDKMAN_CANDIDATES_DIR}/${candidate}"
 
 	rm -rf "${SDKMAN_DIR}/tmp/out"
-	unzip -oq "${SDKMAN_DIR}/archives/${candidate}-${version}.zip" -d "${SDKMAN_DIR}/tmp/out"
+	unzip -oq "${SDKMAN_DIR}/tmp/${candidate}-${version}.zip" -d "${SDKMAN_DIR}/tmp/out"
 	mv -f "$SDKMAN_DIR"/tmp/out/* "${SDKMAN_CANDIDATES_DIR}/${candidate}/${version}"
 	__sdkman_echo_green "Done installing!"
 	echo ""
@@ -79,7 +79,7 @@ function __sdkman_install_candidate_version() {
 function __sdkman_install_local_version() {
 	local candidate version folder version_length version_length_max
 
-	version_length_max=15
+	version_length_max=20
 
 	candidate="$1"
 	version="$2"
@@ -114,66 +114,47 @@ function __sdkman_install_local_version() {
 }
 
 function __sdkman_download() {
-	local candidate version archives_folder
-	local headers_file tmp_headers_file
+	local candidate version
 
 	candidate="$1"
 	version="$2"
 
-	archives_folder="${SDKMAN_DIR}/archives"
 	metadata_folder="${SDKMAN_DIR}/var/metadata"
-	mkdir -p ${metadata_folder}
+	mkdir -p "${metadata_folder}"
 		
-	if [ ! -f "${archives_folder}/${candidate}-${version}.zip" ]; then
-		local platform_parameter="$(echo $SDKMAN_PLATFORM | tr '[:upper:]' '[:lower:]')"
-		local download_url="${SDKMAN_CANDIDATES_API}/broker/download/${candidate}/${version}/${platform_parameter}"
-		local base_name="${candidate}-${version}"
-		local zip_archive_target="${SDKMAN_DIR}/archives/${base_name}.zip"
-		tmp_headers_file="${SDKMAN_DIR}/tmp/${base_name}.headers.tmp"
-		headers_file="${metadata_folder}/${base_name}.headers"
+	local platform_parameter="$SDKMAN_PLATFORM"
+	local download_url="${SDKMAN_BROKER_API}/download/${candidate}/${version}/${platform_parameter}"
+	local base_name="${candidate}-${version}"
+	local tmp_headers_file="${SDKMAN_DIR}/tmp/${base_name}.headers.tmp"
+	local headers_file="${metadata_folder}/${base_name}.headers"
 
-		# pre-installation hook: implements function __sdkman_pre_installation_hook
-		local pre_installation_hook="${SDKMAN_DIR}/tmp/hook_pre_${candidate}_${version}.sh"
-		__sdkman_echo_debug "Get pre-installation hook: ${SDKMAN_CANDIDATES_API}/hooks/pre/${candidate}/${version}/${platform_parameter}"
-		__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/hooks/pre/${candidate}/${version}/${platform_parameter}" >| "$pre_installation_hook"
-		__sdkman_echo_debug "Copy remote pre-installation hook: $pre_installation_hook"
-		source "$pre_installation_hook"
-		__sdkman_pre_installation_hook || return 1
-		__sdkman_echo_debug "Completed pre-installation hook..."
+	export local binary_input="${SDKMAN_DIR}/tmp/${base_name}.bin"
+	export local zip_output="${SDKMAN_DIR}/tmp/${base_name}.zip"
 
-		export local binary_input="${SDKMAN_DIR}/tmp/${base_name}.bin"
-		export local zip_output="${SDKMAN_DIR}/tmp/$base_name.zip"
+	echo ""
+	__sdkman_echo_no_colour "Downloading: ${candidate} ${version}"
+	echo ""
+	__sdkman_echo_no_colour "In progress..."
+	echo ""
 
-		echo ""
-		__sdkman_echo_no_colour "Downloading: ${candidate} ${version}"
-		echo ""
-		__sdkman_echo_no_colour "In progress..."
-		echo ""
+	# download binary
+	__sdkman_secure_curl_download "${download_url}" --output "${binary_input}" --dump-header "${tmp_headers_file}"
+	grep '^X-Sdkman' "${tmp_headers_file}" > "${headers_file}"
+	__sdkman_echo_debug "Downloaded binary to: ${binary_input} (HTTP headers written to: ${headers_file})"
 
-		# download binary
-		__sdkman_secure_curl_download "${download_url}" --output "${binary_input}" --dump-header "${tmp_headers_file}"
-		grep '^X-Sdkman' "${tmp_headers_file}" > "${headers_file}"
-		__sdkman_echo_debug "Downloaded binary to: ${binary_input} (HTTP headers written to: ${headers_file})"
-
-		# post-installation hook: implements function __sdkman_post_installation_hook
-		# responsible for taking `binary_input` and producing `zip_output`
-		local post_installation_hook="${SDKMAN_DIR}/tmp/hook_post_${candidate}_${version}.sh"
-		__sdkman_echo_debug "Get post-installation hook: ${SDKMAN_CANDIDATES_API}/hooks/post/${candidate}/${version}/${platform_parameter}"
-		__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/hooks/post/${candidate}/${version}/${platform_parameter}" >| "$post_installation_hook"
-		__sdkman_echo_debug "Copy remote post-installation hook: ${post_installation_hook}"
-		source "$post_installation_hook"
-		__sdkman_post_installation_hook || return 1
-		__sdkman_echo_debug "Processed binary as: $zip_output"
-		__sdkman_echo_debug "Completed post-installation hook..."
-
-		mv -f "$zip_output" "$zip_archive_target"
-		__sdkman_echo_debug "Moved to archive folder: $zip_archive_target"
-	else
-		echo ""
-		__sdkman_echo_no_colour "Found a previously downloaded ${candidate} ${version} archive. Not downloading it again..."
-	fi
-	__sdkman_checksum_zip "${archives_folder}/${candidate}-${version}.zip" "${headers_file}" || return 1
-	__sdkman_validate_zip "${archives_folder}/${candidate}-${version}.zip" || return 1
+	# post-installation hook: implements function __sdkman_post_installation_hook
+	# responsible for taking `binary_input` and producing `zip_output`
+	local post_installation_hook="${SDKMAN_DIR}/tmp/hook_post_${candidate}_${version}.sh"
+	__sdkman_echo_debug "Get post-installation hook: ${SDKMAN_CANDIDATES_API}/hooks/post/${candidate}/${version}/${platform_parameter}"
+	__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/hooks/post/${candidate}/${version}/${platform_parameter}" >| "$post_installation_hook"
+	__sdkman_echo_debug "Copy remote post-installation hook: ${post_installation_hook}"
+	source "$post_installation_hook"
+	__sdkman_post_installation_hook || return 1
+	__sdkman_echo_debug "Processed binary as: $zip_output"
+	__sdkman_echo_debug "Completed post-installation hook..."
+		
+	__sdkman_validate_zip "${zip_output}" || return 1
+	__sdkman_checksum_zip "${zip_output}" "${headers_file}" || return 1
 	echo ""
 }
 
@@ -193,7 +174,7 @@ function __sdkman_validate_zip() {
 function __sdkman_checksum_zip() {
 	local -r zip_archive="$1"
 	local -r headers_file="$2"
-	local algorithm checksum cmd
+	local algorithm checksum
 	local shasum_avail=false
 	local md5sum_avail=false
 	
@@ -226,18 +207,20 @@ function __sdkman_checksum_zip() {
 		checksum=$(echo $line | sed -n 's/^X-Sdkman-Checksum-.*:\(.*\)$/\1/p' | tr -cd '[:alnum:]')
 		
 		if [[ -n ${algorithm} && -n ${checksum} ]]; then
-			
 			if [[ "$algorithm" =~ 'SHA' && "$shasum_avail" == 'true' ]]; then
-				cmd="echo \"${checksum} *${zip_archive}\" | shasum --check --quiet"
-				
-			elif [[ "$algorithm" =~ 'MD5' && "$md5sum_avail" == 'true' ]]; then
-				cmd="echo \"${checksum} ${zip_archive}\" | md5sum --check --quiet"
-			fi
-			
-			if [[ -n $cmd ]]; then
 				__sdkman_echo_no_colour "Verifying artifact: ${zip_archive} (${algorithm}:${checksum})"
 
-				if ! eval "$cmd"; then
+				if ! printf '%s *%s\n' "$checksum" "$zip_archive" | shasum --check --quiet; then
+					rm -f "$zip_archive"
+					echo ""
+					__sdkman_echo_red "Stop! An invalid checksum was detected and the archive removed! Please try re-installing."
+					return 1
+				fi
+
+			elif [[ "$algorithm" =~ 'MD5' && "$md5sum_avail" == 'true' ]]; then
+				__sdkman_echo_no_colour "Verifying artifact: ${zip_archive} (${algorithm}:${checksum})"
+
+				if ! printf '%s %s\n' "$checksum" "$zip_archive" | md5sum --check --quiet; then
 					rm -f "$zip_archive"
 					echo ""
 					__sdkman_echo_red "Stop! An invalid checksum was detected and the archive removed! Please try re-installing."
@@ -247,5 +230,5 @@ function __sdkman_checksum_zip() {
 				__sdkman_echo_no_colour "Not able to perform checksum verification at this time."
 			fi
 		fi
-  	done < ${headers_file}
+  	done < "${headers_file}"
 }

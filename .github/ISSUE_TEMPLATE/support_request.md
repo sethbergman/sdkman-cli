@@ -6,13 +6,13 @@ labels: 'support'
 assignees: ''
 
 ---
-<!-- Thank you for using SDKMAN!. We want to help users using the software, but we also try to avoid filling the issue tracker with too many support requests. We kindly ask you to use our Slack channel #user-issues before posting.
+<!-- Thank you for using SDKMAN!. We want to help users using the software but also avoid filling the issue tracker with too many support requests. Please talk to us on our Discord server before posting.
 
-Please consider the following things. Note, that ignoring all of these might lead to the issue simply being closed. -->
+Please consider the following things. Just so you know, ignoring any of these might lead to the issue being closed abruptly. -->
 
 - [ ] I have checked [the documentation](https://sdkman.io/usage)
-- [ ] I have done a quick search in [past issues](https://github.com/rclone/rclone/issues?q=) or [Stack Overflow](https://stackoverflow.com/questions/tagged/sdkman) for similar problems
-- [ ] I have brought up a conversation in the [Slack User Issues Channel](https://sdkman.slack.com/app_redirect?channel=user-issues)
+- [ ] I have performed a quick search in [past issues](https://github.com/sdkman/sdkman-cli/issues?q=) or [Stack Overflow](https://stackoverflow.com/questions/tagged/sdkman) for similar problems
+- [ ] I have brought up a conversation in the community [Discord](https://discord.gg/y9mVJYVyu4) server
 
 **Question**
 <!-- A clear and concise description of the issue you are encountering -->

@@ -19,8 +19,8 @@ counter = "${(Math.random() * 10000).toInteger()}".padLeft(4, "0")
 
 localGroovyCandidate = "/tmp/groovy-core" as File
 
-sdkmanVersion = "5.0.0"
-sdkmanVersionOutdated = "4.0.0"
+sdkmanScriptVersion = "5.0.0"
+sdkmanNativeVersion = "0.0.1"
 
 sdkmanBaseEnv = FilesystemUtils.prepareBaseDir().absolutePath
 sdkmanBaseDir = sdkmanBaseEnv as File
@@ -34,11 +34,9 @@ varDir = "${sdkmanDirEnv}/var" as File
 metadataDir = "${varDir}/metadata" as File
 etcDir = "${sdkmanDirEnv}/etc" as File
 extDir = "${sdkmanDirEnv}/ext" as File
-archiveDir = "${sdkmanDirEnv}/archives" as File
 tmpDir = "${sdkmanDir}/tmp" as File
 
-broadcastFile = new File(varDir, "broadcast")
-broadcastIdFile = new File(varDir, "broadcast_id")
+healthcheckFile = new File(varDir, "healthcheck")
 candidatesFile = new File(varDir, "candidates")
 versionFile = new File(varDir, "version")
 initScript = new File(binDir, "sdkman-init.sh")

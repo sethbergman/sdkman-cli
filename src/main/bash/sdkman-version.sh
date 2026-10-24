@@ -17,6 +17,8 @@
 #
 
 function __sdk_version() {
+	__sdkman_deprecation_notice "version"
+    local version=$(cat $SDKMAN_DIR/var/version)
 	echo ""
-	__sdkman_echo_yellow "SDKMAN ${SDKMAN_VERSION}"
+	__sdkman_echo_yellow "SDKMAN $version"
 }

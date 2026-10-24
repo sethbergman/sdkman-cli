@@ -10,8 +10,6 @@ import static cucumber.api.groovy.EN.And
 import static sdkman.stubs.WebServiceStub.primeEndpointWithString
 import static sdkman.stubs.WebServiceStub.primeSelfupdate
 
-def BROADCAST_MESSAGE = "broadcast message"
-
 And(~'^the sdkman work folder is created$') { ->
 	assert sdkmanDir.isDirectory(), "The SDKMAN directory does not exist."
 }
@@ -30,49 +28,23 @@ And(~'^the archive for candidate "([^"]*)" version "([^"]*)" is corrupt$') { Str
 }
 
 And(~'^the archive for candidate "([^"]*)" version "([^"]*)" is removed$') { String candidate, String version ->
-	def archive = new File("${sdkmanDir}/archives/${candidate}-${version}.zip")
+	def archive = new File("${sdkmanDir}/tmp/${candidate}-${version}.zip")
 	assert !archive.exists()
 }
 
+And(~'^the sdkman (.*) version "(.*)" is available for download$') { format, version ->
+	primeEndpointWithString("/broker/version/sdkman/${format}/stable", version)
+}
+
 And(~'^the internet is reachable$') { ->
-	primeEndpointWithString("/broadcast/latest/id", "12345")
-	primeEndpointWithString("/broadcast/latest", BROADCAST_MESSAGE)
-	primeEndpointWithString("/app/stable", sdkmanVersion)
+	primeEndpointWithString("/healthcheck", "12345")
 	primeSelfupdate()
 
-	offlineMode = false
 	serviceUrlEnv = SERVICE_UP_URL
 	javaHome = FAKE_JDK_PATH
 }
 
 And(~'^the internet is not reachable$') { ->
-	offlineMode = false
-	serviceUrlEnv = SERVICE_DOWN_URL
-	javaHome = FAKE_JDK_PATH
-}
-
-And(~'^offline mode is disabled with reachable internet$') { ->
-	primeEndpointWithString("/broadcast/latest/id", "12345")
-	primeEndpointWithString("/broadcast/latest", BROADCAST_MESSAGE)
-	primeEndpointWithString("/app/stable", sdkmanVersion)
-
-	offlineMode = false
-	serviceUrlEnv = SERVICE_UP_URL
-	javaHome = FAKE_JDK_PATH
-}
-
-And(~'^offline mode is enabled with reachable internet$') { ->
-	primeEndpointWithString("/broadcast/latest/id", "12345")
-	primeEndpointWithString("/broadcast/latest", BROADCAST_MESSAGE)
-	primeEndpointWithString("/app/stable", sdkmanVersion)
-
-	offlineMode = true
-	serviceUrlEnv = SERVICE_UP_URL
-	javaHome = FAKE_JDK_PATH
-}
-
-And(~'^offline mode is enabled with unreachable internet$') { ->
-	offlineMode = true
 	serviceUrlEnv = SERVICE_DOWN_URL
 	javaHome = FAKE_JDK_PATH
 }
@@ -87,50 +59,27 @@ And(~'^an "(.*)" machine with "(.*)" installed$') { String machine, String kerne
 
 And(~'^an initialised environment$') { ->
 	bash = SdkmanBashEnvBuilder.create(sdkmanBaseDir)
-			.withOfflineMode(offlineMode)
 			.withCandidatesApi(serviceUrlEnv)
+			.withBrokerApi(serviceUrlEnv)
 			.withJdkHome(javaHome)
 			.withHttpProxy(HTTP_PROXY)
-			.withVersionCache(sdkmanVersion)
+			.withScriptVersion(sdkmanScriptVersion)
+			.withNativeVersion(sdkmanNativeVersion)
 			.withCandidates(localCandidates)
-			.withSdkmanVersion(sdkmanVersion)
 			.build()
 }
 
 And(~'^an initialised environment without debug prints$') { ->
 	bash = SdkmanBashEnvBuilder.create(sdkmanBaseDir)
-			.withOfflineMode(offlineMode)
 			.withCandidatesApi(serviceUrlEnv)
+			.withBrokerApi(serviceUrlEnv)
 			.withJdkHome(javaHome)
 			.withHttpProxy(HTTP_PROXY)
-			.withVersionCache(sdkmanVersion)
+			.withScriptVersion(sdkmanScriptVersion)
+			.withNativeVersion(sdkmanNativeVersion)
 			.withCandidates(localCandidates)
-			.withSdkmanVersion(sdkmanVersion)
 			.withDebugMode(false)
 			.build()
-}
-
-And(~'^an outdated initialised environment$') { ->
-	bash = SdkmanBashEnvBuilder.create(sdkmanBaseDir)
-			.withOfflineMode(offlineMode)
-			.withCandidatesApi(serviceUrlEnv)
-			.withJdkHome(javaHome)
-			.withHttpProxy(HTTP_PROXY)
-			.withVersionCache(sdkmanVersionOutdated)
-			.withSdkmanVersion(sdkmanVersionOutdated)
-			.build()
-
-	def twoDaysAgoInMillis = System.currentTimeMillis() - 172800000
-
-	def upgradeFile = "$sdkmanDir/var/delay_upgrade" as File
-	upgradeFile.createNewFile()
-	upgradeFile.setLastModified(twoDaysAgoInMillis)
-
-	def versionFile = "$sdkmanDir/var/version" as File
-	versionFile.setLastModified(twoDaysAgoInMillis)
-
-	def initFile = "$sdkmanDir/bin/sdkman-init.sh" as File
-	initFile.text = initFile.text.replace(sdkmanVersion, sdkmanVersionOutdated)
 }
 
 And(~'^the system is bootstrapped$') { ->
@@ -142,8 +91,12 @@ And(~'^the system is bootstrapped again$') { ->
 	bash.execute("source $sdkmanDirEnv/bin/sdkman-init.sh")
 }
 
-And(~/^the sdkman version is "([^"]*)"$/) { String version ->
-	sdkmanVersion = version
+And(~/^the sdkman scripts version is "([^"]*)"$/) { String version ->
+	sdkmanScriptVersion = version
+}
+
+And(~/^the sdkman native version is "([^"]*)"$/) { String version ->
+	sdkmanNativeVersion = version
 }
 
 And(~/^the candidates cache is initialised with "(.*)"$/) { String candidate ->

@@ -28,7 +28,7 @@ function __sdk_list() {
 
 function __sdkman_list_candidates() {
 	if [[ "$SDKMAN_AVAILABLE" == "false" ]]; then
-		__sdkman_echo_red "This command is not available while offline."
+		__sdkman_echo_red "This command is not available. Internet unreachable."
 	else
 		__sdkman_echo_paged "$(__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/candidates/list")"
 	fi
@@ -42,30 +42,16 @@ function __sdkman_list_versions() {
 	__sdkman_determine_current_version "$candidate"
 
 	if [[ "$SDKMAN_AVAILABLE" == "false" ]]; then
-		__sdkman_offline_list "$candidate" "$versions_csv"
+		__sdkman_installed_versions "$candidate" "$versions_csv"
 	else
-		__sdkman_echo_paged "$(__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/candidates/${candidate}/${SDKMAN_PLATFORM}/versions/list?current=${CURRENT}&installed=${versions_csv}")"
+		local current_encoded versions_csv_encoded
+		current_encoded="$(__sdkman_url_encode_plus "$CURRENT")"
+		versions_csv_encoded="$(__sdkman_url_encode_plus "$versions_csv")"
+		__sdkman_echo_paged "$(__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/candidates/${candidate}/${SDKMAN_PLATFORM}/versions/list?current=${current_encoded}&installed=${versions_csv_encoded}")"
 	fi
 }
 
-function __sdkman_build_version_csv() {
-	local candidate versions_csv
-
-	candidate="$1"
-	versions_csv=""
-
-	if [[ -d "${SDKMAN_CANDIDATES_DIR}/${candidate}" ]]; then
-		for version in $(find "${SDKMAN_CANDIDATES_DIR}/${candidate}" -maxdepth 1 -mindepth 1 \( -type l -o -type d \) -exec basename '{}' \; | sort -r); do
-			if [[ "$version" != 'current' ]]; then
-				versions_csv="${version},${versions_csv}"
-			fi
-		done
-		versions_csv=${versions_csv%?}
-	fi
-	echo "$versions_csv"
-}
-
-function __sdkman_offline_list() {
+function __sdkman_installed_versions() {
 	local candidate versions_csv
 
 	candidate="$1"
@@ -95,3 +81,22 @@ function __sdkman_offline_list() {
 	__sdkman_echo_no_colour "> - currently in use                                                            "
 	__sdkman_echo_no_colour "--------------------------------------------------------------------------------"
 }
+
+function __sdkman_build_version_csv() {
+	local candidate versions_csv
+
+	candidate="$1"
+	versions_csv=""
+
+	if [[ -d "${SDKMAN_CANDIDATES_DIR}/${candidate}" ]]; then
+		for version in $(find "${SDKMAN_CANDIDATES_DIR}/${candidate}" -maxdepth 1 -mindepth 1 \( -type l -o -type d \) -exec basename '{}' \; | sort -r); do
+			if [[ "$version" != 'current' ]]; then
+				versions_csv="${version},${versions_csv}"
+			fi
+		done
+		versions_csv=${versions_csv%?}
+	fi
+	echo "$versions_csv"
+}
+
+

@@ -52,11 +52,11 @@ function __sdkman_determine_version() {
 		VERSION=$(readlink "${SDKMAN_CANDIDATES_DIR}/${candidate}/current" | sed "s!${SDKMAN_CANDIDATES_DIR}/${candidate}/!!g")
 
 	elif [[ "$SDKMAN_AVAILABLE" == "false" && -n "$version" ]]; then
-		__sdkman_echo_red "Stop! ${candidate} ${version} is not available while offline."
+		__sdkman_echo_red "Stop! ${candidate} ${version} is not available. Internet unreachable."
 		return 1
 
 	elif [[ "$SDKMAN_AVAILABLE" == "false" && -z "$version" ]]; then
-		__sdkman_echo_red "This command is not available while offline."
+		__sdkman_echo_red "This command is not available. Internet unreachable."
 		return 1
 
 	else
@@ -64,7 +64,7 @@ function __sdkman_determine_version() {
 			version=$(__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/candidates/default/${candidate}")
 		fi
 
-		local validation_url="${SDKMAN_CANDIDATES_API}/candidates/validate/${candidate}/${version}/$(echo $SDKMAN_PLATFORM | tr '[:upper:]' '[:lower:]')"
+		local validation_url="${SDKMAN_CANDIDATES_API}/candidates/validate/${candidate}/${version}/${SDKMAN_PLATFORM}"
 		VERSION_VALID=$(__sdkman_secure_curl "$validation_url")
 		__sdkman_echo_debug "Validate $candidate $version for $SDKMAN_PLATFORM: $VERSION_VALID"
 		__sdkman_echo_debug "Validation URL: $validation_url"

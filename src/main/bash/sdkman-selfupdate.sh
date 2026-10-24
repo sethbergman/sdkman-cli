@@ -18,51 +18,38 @@
 
 function __sdk_selfupdate() {
 	local force_selfupdate
+	local sdkman_script_version_api
+	local sdkman_native_version_api
 
-	force_selfupdate="$1"
 	if [[ "$SDKMAN_AVAILABLE" == "false" ]]; then
-		echo "This command is not available while offline."
-	elif [[ "$SDKMAN_REMOTE_VERSION" == "$SDKMAN_VERSION" && "$force_selfupdate" != "force" ]]; then
-		echo "No update available at this time."
-	else
-		export sdkman_debug_mode
-		__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/selfupdate" | bash
+		echo "This command is not available. Internet unreachable."
+		return 1
 	fi
 
-	unset SDKMAN_FORCE_SELFUPDATE
-}
+	if [[ "$sdkman_beta_channel" == "true" ]]; then
+		sdkman_script_version_api="${SDKMAN_CANDIDATES_API}/broker/version/sdkman/script/beta"
+		sdkman_native_version_api="${SDKMAN_CANDIDATES_API}/broker/version/sdkman/native/beta"
+	else
+		sdkman_script_version_api="${SDKMAN_CANDIDATES_API}/broker/version/sdkman/script/stable"
+		sdkman_native_version_api="${SDKMAN_CANDIDATES_API}/broker/version/sdkman/native/stable"
+	fi
 
-function __sdkman_auto_update() {
-	local remote_version version delay_upgrade
+	sdkman_remote_script_version=$(__sdkman_secure_curl "$sdkman_script_version_api")
+	sdkman_remote_native_version=$(__sdkman_secure_curl "$sdkman_native_version_api")
 
-	remote_version="$1"
-	version="$2"
-	delay_upgrade="${SDKMAN_DIR}/var/delay_upgrade"
+	sdkman_local_script_version=$(< "$SDKMAN_DIR/var/version")
+	sdkman_local_native_version=$(< "$SDKMAN_DIR/var/version_native")
 
-	if [[ -n "$(find "$delay_upgrade" -mtime +1)" && "$remote_version" != "$version" ]]; then
-		echo ""
-		echo ""
-		__sdkman_echo_yellow "ATTENTION: A new version of SDKMAN is available..."
-		echo ""
-		__sdkman_echo_no_colour "The current version is $remote_version, but you have $version."
-		echo ""
+	__sdkman_echo_debug "Script: local version: $sdkman_local_script_version; remote version: $sdkman_remote_script_version"
+	__sdkman_echo_debug "Native: local version: $sdkman_local_native_version; remote version: $sdkman_remote_native_version"
 
-		if [[ "$sdkman_auto_answer" == false ]]; then
-			__sdkman_echo_confirm "Would you like to upgrade now? (Y/n): "
-			read upgrade
-		fi
-
-		if [[ -z "$upgrade" ]]; then
-			upgrade="Y"
-		fi
-
-		if [[ "$upgrade" == "Y" || "$upgrade" == "y" ]]; then
-			__sdk_selfupdate
-			unset upgrade
-		else
-			__sdkman_echo_no_colour "Not upgrading today..."
-		fi
-
-		touch "$delay_upgrade"
+	force_selfupdate="$1"
+	export sdkman_debug_mode
+	if [[ "$sdkman_local_script_version" == "$sdkman_remote_script_version" && "$sdkman_local_native_version" == "$sdkman_remote_native_version" && "$force_selfupdate" != "force" ]]; then
+		echo "No update available at this time."
+	elif [[ "$sdkman_beta_channel" == "true" ]]; then
+		__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/selfupdate/beta/${SDKMAN_PLATFORM}" | bash
+	else
+		__sdkman_secure_curl "${SDKMAN_CANDIDATES_API}/selfupdate/stable/${SDKMAN_PLATFORM}" | bash
 	fi
 }

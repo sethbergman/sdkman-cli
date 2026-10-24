@@ -34,14 +34,21 @@ jreleaser {
 			distributionType = 'BINARY'
 			artifact {
 				path = "build/distributions/{{distributionName}}-${sdkmanVersion}.zip"
+				extraProperties.put("universal", "true")
 			}
 		}
 	}
-
+	
 	announce {
-		twitter {
+		mastodon {
 			active = 'RELEASE'
-			status = 'Released version {{tagName}} of SDKMAN! {{releaseNotesUrl}}'
+			status = '🚀 SDKMAN! CLI {{tagName}} released! Full changelog: {{releaseNotesUrl}}'
+			host = 'https://fosstodon.org'
+		}
+		bluesky {
+			active = 'RELEASE'
+			host = 'https://bsky.social'
+			status = '🚀 SDKMAN! CLI {{tagName}} released! Full changelog: {{releaseNotesUrl}}'
 		}
 	}
 }

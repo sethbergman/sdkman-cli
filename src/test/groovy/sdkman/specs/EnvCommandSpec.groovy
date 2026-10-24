@@ -9,19 +9,15 @@ import static java.nio.file.Files.createSymbolicLink
 class EnvCommandSpec extends SdkmanEnvSpecification {
 	static final String CANDIDATES_API = "http://localhost:8080/2"
 
-	static final String BROADCAST_API_LATEST_ID_ENDPOINT = "$CANDIDATES_API/broadcast/latest/id"
 	static final String CANDIDATES_DEFAULT_JAVA = "$CANDIDATES_API/candidates/default/java"
 
 	def "should generate .sdkmanrc when called with 'init'"() {
 		given:
-		curlStub.primeWith(BROADCAST_API_LATEST_ID_ENDPOINT, "echo dbfb025be9f97fda2052b5febcca0155")
-			    .primeWith(CANDIDATES_DEFAULT_JAVA, "echo 11.0.6.hs-adpt")
+		curlStub.primeWith(CANDIDATES_DEFAULT_JAVA, "echo 11.0.6.hs-adpt")
 
 		setupCandidates(candidatesDirectory)
 
 		bash = sdkmanBashEnvBuilder
-			.withOfflineMode(true)
-			.withVersionCache("x.y.z")
 			.build()
 
 		bash.start()
@@ -63,8 +59,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.build()
 
 		new File(bash.workDir, '.sdkmanrc').text = sdkmanrc
@@ -100,8 +94,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.withConfiguration("sdkman_auto_env", sdkmanAutoEnv)
 			.build()
 
@@ -135,8 +127,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.withConfiguration("sdkman_auto_env", "true")
 			.build()
 
@@ -166,8 +156,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.withConfiguration("sdkman_auto_env", "true")
 			.build()
 
@@ -193,8 +181,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.withConfiguration("sdkman_auto_env", "true")
 			.build()
 
@@ -227,8 +213,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		createSymbolicLink(Paths.get("$candidatesDirectory/groovy/current"), Paths.get("$candidatesDirectory/groovy/2.4.6"))
 
 		bash = sdkmanBashEnvBuilder
-				.withVersionCache("x.y.z")
-				.withOfflineMode(true)
 				.withConfiguration("sdkman_auto_env", "true")
 				.build()
 
@@ -266,8 +250,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		createSymbolicLink(Paths.get("$candidatesDirectory/ant/current"), Paths.get("$candidatesDirectory/ant/1.10.8"))
 
 		bash = sdkmanBashEnvBuilder
-				.withVersionCache("x.y.z")
-				.withOfflineMode(true)
 				.withConfiguration("sdkman_auto_env", "true")
 				.build()
 
@@ -314,8 +296,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-				.withVersionCache("x.y.z")
-				.withOfflineMode(true)
 				.withConfiguration("sdkman_auto_env", "true")
 				.build()
 
@@ -340,8 +320,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 	def "should issue an error if .sdkmanrc contains a malformed candidate version"() {
 		given:
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.build()
 
 		new File(bash.workDir, ".sdkmanrc").text = "groovy 2.4.1"
@@ -359,6 +337,27 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 	}
 
+	def "should issue an error when .sdkmanrc contains a candidate version which is not installed"() {
+		given:
+		bash = sdkmanBashEnvBuilder
+				.build()
+
+		new File(bash.workDir, ".sdkmanrc").text = "groovy=2.4.1"
+
+		bash.start()
+		bash.execute("source $bootstrapScript")
+
+		when:
+		bash.execute("sdk env")
+
+		then:
+		verifyAll(bash) {
+			status == 1
+			output.contains("Stop! groovy 2.4.1 is not installed.")
+			output.contains("Run 'sdk env install' to install it.")
+		}
+	}
+
 	def "should support blank lines, comments and inline comments"() {
 		given:
 		new FileTreeBuilder(candidatesDirectory).with {
@@ -368,8 +367,6 @@ class EnvCommandSpec extends SdkmanEnvSpecification {
 		}
 
 		bash = sdkmanBashEnvBuilder
-			.withVersionCache("x.y.z")
-			.withOfflineMode(true)
 			.build()
 
 		new File(bash.workDir, ".sdkmanrc").text = sdkmanrc

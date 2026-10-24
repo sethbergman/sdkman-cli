@@ -1,13 +1,19 @@
 # SDKMAN! CLI
 ### The Software Development Kit Manager Command Line Interface
 
-[![Backers on Open Collective](https://opencollective.com/sdkman/backers/badge.svg)](#backers) 
-[![Sponsors on Open Collective](https://opencollective.com/sdkman/sponsors/badge.svg)](#sponsors)
-[![Slack](https://slack.sdkman.io/badge.svg)](https://slack.sdkman.io)
+[![Backers on Open Collective](https://img.shields.io/opencollective/backers/sdkman)](#backers) 
+[![Sponsors on Open Collective](https://img.shields.io/opencollective/sponsors/sdkman)](#sponsors)
+[![Discord](https://img.shields.io/discord/1245471991117512754)](https://discord.gg/y9mVJYVyu4)
 
-SDKMAN is a tool for managing parallel Versions of multiple Software Development Kits on any Unix based system. It provides a convenient command line interface for installing, switching, removing and listing Candidates.
+SDKMAN is a tool for managing parallel Versions of multiple Software Development Kits on any Unix-based system. It provides a convenient command-line interface for installing, switching, removing, and listing Candidates.
 
 See documentation on the [SDKMAN! website](https://sdkman.io).
+
+## NOTICE
+
+**We are rewriting all the commands for SDKMAN! in [Rust](https://www.rust-lang.org/) under a [new project](https://github.com/sdkman/sdkman-cli-native) that supplements this one. Only bug fixes to supporting code will be
+accepted in this project. As a result, no further enhancements will be accepted on the commands in this project, and the commands here will be phased out in due course. This project will eventually form a lightweight
+wrapper/launcher for the replacement Rust commands.**
 
 ## Installation
 
@@ -23,38 +29,20 @@ All SDKMAN's BDD tests describing the CLI behaviour are written in Cucumber and 
 
     $ ./gradlew test
 
-To perform development, you will need to have a JDK 8 or higher installed which can be obtained by running the following after installing SDKMAN:
+To perform development, you will need to have a JDK 11 installed which can be obtained by running the following after installing SDKMAN:
 
-    $ sdk install java
+    $ sdk env install
 
-### Using Docker for tests
+## Hosting
 
-You can run the tests in a Docker container to guarantee a clean test environment.
+We're proud to host our backend services on DigitalOcean as a sponsored partner.
 
-    $ docker build --tag=sdkman-cli/gradle .
-    $ docker run --rm -it sdkman-cli/gradle test
-
-By running the following command, you don't need to wait for downloading Gradle wrapper and other dependencies. The test reports can be found under the local `build` directory.
-
-    $ docker run --rm -it -v $PWD:/usr/src/app -v $HOME/.gradle:/root/.gradle sdkman-cli/gradle test
-
-### Local Installation
-
-To install SDKMAN locally running against your local server, run the following commands:
-
-	$ ./gradlew install
-	$ source ~/.sdkman/bin/sdkman-init.sh
-
-Or run install locally with Production configuration:
-
-	$ ./gradlew -Penv=production install
-	$ source ~/.sdkman/bin/sdkman-init.sh
+[![DigitalOcean Referral Badge](https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%203.svg)](https://www.digitalocean.com/?refcode=d99e5747251d&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
 
 ## Contributors
 
 This project exists thanks to all the people who contribute. 
 <a href="https://github.com/sdkman/sdkman-cli/graphs/contributors"><img src="https://opencollective.com/sdkman/contributors.svg?width=890&button=false" /></a>
-
 
 ## Backers
 

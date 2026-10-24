@@ -1,19 +1,21 @@
 name: Pull Requests
-on: pull_request_target
+#run only on PR, not fork. Pull request that way the PR submitter will not have access to the repo credentials 
+on: pull_request
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
             ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-java@v2
+      - uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '11'
+          cache: 'gradle'
       - name: Run with Gradle
         run: ./gradlew clean test --info
-      - uses: kentaro-m/auto-assign-action@v1.1.2
+      - uses: kentaro-m/auto-assign-action@v2.0.2
         with:
           configuration-path: ".github/auto_assign.yml"

@@ -17,9 +17,9 @@
 #
 
 function __sdk_help() {
+	__sdkman_deprecation_notice "help"
 	__sdkman_echo_no_colour ""
 	__sdkman_echo_no_colour "Usage: sdk <command> [candidate] [version]"
-	__sdkman_echo_no_colour "       sdk offline <enable|disable>"
 	__sdkman_echo_no_colour ""
 	__sdkman_echo_no_colour "   commands:"
 	__sdkman_echo_no_colour "       install   or i    <candidate> [version] [local-path]"
@@ -33,12 +33,14 @@ function __sdk_help() {
 	__sdkman_echo_no_colour "       current   or c    [candidate]"
 	__sdkman_echo_no_colour "       upgrade   or ug   [candidate]"
 	__sdkman_echo_no_colour "       version   or v"
-	__sdkman_echo_no_colour "       broadcast or b"
 	__sdkman_echo_no_colour "       help"
-	__sdkman_echo_no_colour "       offline           [enable|disable]"
-	__sdkman_echo_no_colour "       selfupdate        [force]"
+
+	if [[ "$sdkman_selfupdate_feature" == "true" ]]; then
+		__sdkman_echo_no_colour "       selfupdate        [force]"
+	fi
+
 	__sdkman_echo_no_colour "       update"
-	__sdkman_echo_no_colour "       flush             [archives|tmp|broadcast|metadata|version]"
+	__sdkman_echo_no_colour "       flush             [tmp|metadata|version]"
 	__sdkman_echo_no_colour ""
 	__sdkman_echo_no_colour "   candidate  :  the SDK to install: groovy, scala, grails, gradle, kotlin, etc."
 	__sdkman_echo_no_colour "                 use list command for comprehensive list of candidates"

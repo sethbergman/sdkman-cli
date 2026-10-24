@@ -65,6 +65,16 @@ function __sdkman_secure_curl_with_timeouts() {
 	fi
 }
 
+function __sdkman_url_encode_plus() {
+	# Percent-encode '+' as %2B for use in a URL query value. A semverish
+	# build-metadata identifier (e.g. 21.0.1+12-open) carries a literal '+';
+	# sent raw as a query arg the candidates service (Play query bind) folds
+	# it to a space, so the version is mis-marked in 'sdk list'. Encoding to
+	# %2B preserves the '+' on the wire (spec 06 §3/§6). '+' never legitimately
+	# appears elsewhere in a query value here, so a blanket substitution is safe.
+	echo "${1//+/%2B}"
+}
+
 function __sdkman_echo_paged() {
 	if [[ -n "$PAGER" ]]; then
 		echo "$@" | eval "$PAGER"
@@ -110,3 +120,19 @@ function __sdkman_echo_confirm() {
 		echo -e -n "\033[1;33m$1\033[0m"
 	fi
 }
+
+function __sdkman_deprecation_notice() {
+	local message="
+[Deprecation Notice]:
+This legacy '$1' command is replaced by a native implementation
+and it will be removed in a future release.
+Please follow the discussion here:
+https://github.com/sdkman/sdkman-cli/discussions/1332"
+
+	if [[ "$sdkman_colour_enable" == 'false' ]]; then
+		__sdkman_echo_no_colour "$message"
+	else
+		__sdkman_echo_yellow "$message"
+	fi
+}
+

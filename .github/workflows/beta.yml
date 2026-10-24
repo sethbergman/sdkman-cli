@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - .github/workflows/*
 
 jobs:
   pre-release:
@@ -15,11 +17,12 @@ jobs:
         ports:
           - 27017:27017
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v2
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '11'
+          cache: 'gradle'
       - name: Run tests
         run: ./gradlew clean test --info
       - name: Set short git hash
@@ -45,3 +48,4 @@ jobs:
           MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
           SHORT_HASH: ${{ steps.var.outputs.sha_short }}
         run: bin/release-binary.sh "$MONGO_URL" "$MONGO_USERNAME" "$MONGO_PASSWORD" "$SHORT_HASH" "latest"
+

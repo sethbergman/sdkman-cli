@@ -3,6 +3,7 @@ package sdkman.env
 import groovy.transform.ToString
 import sdkman.stubs.CurlStub
 import sdkman.stubs.UnameStub
+import sdkman.support.UnixUtils
 
 @ToString(includeNames = true)
 class SdkmanBashEnvBuilder {
@@ -19,21 +20,23 @@ class SdkmanBashEnvBuilder {
 	private Optional<CurlStub> curlStub = Optional.empty()
 	private Optional<UnameStub> unameStub = Optional.empty()
 	private List candidates = ['groovy', 'grails', 'java']
-	private boolean offlineMode = false
-	private String broadcast = "This is a LIVE broadcast!"
+	private String platform = UnixUtils.inferPlatform()
 	private String candidatesApi = "http://localhost:8080/2"
-	private String sdkmanVersion = "5.0.0"
+	private String brokerApi = "http://localhost:8080/2"
 	private String jdkHome = "/path/to/my/jdk"
 	private String httpProxy
-	private String versionCache
+	private String scriptVersion
+	private String nativeVersion
 	private boolean debugMode = true
 
 	Map config = [
 			sdkman_auto_answer : 'false',
-			sdkman_beta_channel: 'false'
+			sdkman_beta_channel: 'false',
+			sdkman_native_enable: 'false',
+			sdkman_selfupdate_feature: 'true'
 	]
 
-	File sdkmanDir, sdkmanBinDir, sdkmanVarDir, sdkmanSrcDir, sdkmanEtcDir, sdkmanExtDir, sdkmanArchivesDir,
+	File sdkmanDir, sdkmanBinDir, sdkmanVarDir, sdkmanSrcDir, sdkmanEtcDir, sdkmanExtDir,
 		 sdkmanTmpDir, sdkmanCandidatesDir, sdkmanMetadataDir, sdkmanContribDir
 	
 	static SdkmanBashEnvBuilder create(File baseFolder) {
@@ -53,14 +56,14 @@ class SdkmanBashEnvBuilder {
 		this.unameStub = Optional.of(unameStub)
 		this
 	}
-
-	SdkmanBashEnvBuilder withCandidates(List candidates) {
-		this.candidates = candidates
+	
+	SdkmanBashEnvBuilder withPlatform(String platform) {
+		this.platform = platform
 		this
 	}
 
-	SdkmanBashEnvBuilder withBroadcast(String broadcast) {
-		this.broadcast = broadcast
+	SdkmanBashEnvBuilder withCandidates(List candidates) {
+		this.candidates = candidates
 		this
 	}
 
@@ -69,13 +72,13 @@ class SdkmanBashEnvBuilder {
 		this
 	}
 
-	SdkmanBashEnvBuilder withOfflineMode(boolean offlineMode) {
-		this.offlineMode = offlineMode
+	SdkmanBashEnvBuilder withCandidatesApi(String service) {
+		this.candidatesApi = service
 		this
 	}
 
-	SdkmanBashEnvBuilder withCandidatesApi(String service) {
-		this.candidatesApi = service
+	SdkmanBashEnvBuilder withBrokerApi(String service) {
+		this.brokerApi = service
 		this
 	}
 
@@ -89,13 +92,13 @@ class SdkmanBashEnvBuilder {
 		this
 	}
 
-	SdkmanBashEnvBuilder withVersionCache(String version) {
-		this.versionCache = version
+	SdkmanBashEnvBuilder withScriptVersion(String version) {
+		this.scriptVersion = version
 		this
 	}
 
-	SdkmanBashEnvBuilder withSdkmanVersion(String version) {
-		this.sdkmanVersion = version
+	SdkmanBashEnvBuilder withNativeVersion(String version) {
+		this.nativeVersion = version
 		this
 	}
 
@@ -111,7 +114,6 @@ class SdkmanBashEnvBuilder {
 		sdkmanSrcDir = prepareDirectory(sdkmanDir, "src")
 		sdkmanEtcDir = prepareDirectory(sdkmanDir, "etc")
 		sdkmanExtDir = prepareDirectory(sdkmanDir, "ext")
-		sdkmanArchivesDir = prepareDirectory(sdkmanDir, "archives")
 		sdkmanTmpDir = prepareDirectory(sdkmanDir, "tmp")
 		sdkmanCandidatesDir = prepareDirectory(sdkmanDir, "candidates")
 		sdkmanMetadataDir = prepareDirectory(sdkmanVarDir, "metadata")
@@ -120,11 +122,12 @@ class SdkmanBashEnvBuilder {
 		curlStub.map { it.build() }
 		unameStub.map { it.build() }
 
+		initializeConfiguration(sdkmanEtcDir, config)
 		initializeCandidates(sdkmanCandidatesDir, candidates)
 		initializeCandidatesCache(sdkmanVarDir, candidates)
-		initializeBroadcast(sdkmanVarDir, broadcast)
-		initializeConfiguration(sdkmanEtcDir, config)
-		initializeVersionCache(sdkmanVarDir, versionCache)
+		initializePlatformDescriptor(sdkmanVarDir, platform)
+		initializeScriptVersionFile(sdkmanVarDir, scriptVersion)
+		initializeNativeVersionFile(sdkmanVarDir, nativeVersion)
 
 		primeInitScript(sdkmanBinDir)
 		primeModuleScripts(sdkmanSrcDir)
@@ -133,9 +136,8 @@ class SdkmanBashEnvBuilder {
 		def env = [
 				SDKMAN_DIR           : sdkmanDir.absolutePath,
 				SDKMAN_CANDIDATES_DIR: sdkmanCandidatesDir.absolutePath,
-				SDKMAN_OFFLINE_MODE  : "$offlineMode",
 				SDKMAN_CANDIDATES_API: candidatesApi,
-				SDKMAN_VERSION       : sdkmanVersion,
+				SDKMAN_BROKER_API    : brokerApi,
 				sdkman_debug_mode    : Boolean.toString(debugMode),
 				JAVA_HOME            : jdkHome
 		]
@@ -153,12 +155,17 @@ class SdkmanBashEnvBuilder {
 		directory
 	}
 
-	private initializeVersionCache(File folder, String version) {
+	private initializeScriptVersionFile(File folder, String version) {
 		if (version) {
 			new File(folder, "version") << version
 		}
 	}
 
+	private initializeNativeVersionFile(File folder, String version) {
+		if (version) {
+			new File(folder, "version_native") << version
+		}
+	}
 
 	private initializeCandidates(File folder, List candidates) {
 		candidates.each { candidate ->
@@ -174,9 +181,10 @@ class SdkmanBashEnvBuilder {
 			candidatesCache << ""
 		}
 	}
-
-	private initializeBroadcast(File targetFolder, String broadcast) {
-		new File(targetFolder, "broadcast") << broadcast
+	
+	private initializePlatformDescriptor(File folder, String platform) {
+		def platformDescriptor = new File(folder, "platform")
+		platformDescriptor << platform
 	}
 
 	private initializeConfiguration(File targetFolder, Map config) {
